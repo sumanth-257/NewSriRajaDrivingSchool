@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>New Sri Driving School</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f2f5;
+      color: #333;
+    }
+
+    /* 🔹 Hero Banner */
+    header {
+      background: url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1350&q=80') no-repeat center center/cover;
+      color: white;
+      text-align: center;
+      padding: 80px 20px 100px;
+      position: relative;
+    }
+    header::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    header h1, header p, .alert-banner {
+      position: relative;
+      z-index: 1;
+    }
+    header h1 {
+      font-size: 85px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    header p {
+      font-size: 20px;
+    }
+
+    /* 🚨 Alert Banner */
+    .alert-banner {
+      background-color: #ff0000cc;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 5px;
+      display: inline-block;
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    /* 🔸 Sections */
+    .section {
+      padding: 25px;
+      max-width: 900px;
+      margin: 20px auto;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      color: #004aad;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .section p {
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    /* 🧭 Why Choose Us */
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .feature-card {
+      flex: 1 1 250px;
+      background: #f8faff;
+      border-left: 5px solid #004aad;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    .feature-card h3 {
+      color: #004aad;
+      margin-bottom: 8px;
+    }
+
+    /* 📅 Timings */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #004aad;
+      color: white;
+    }
+    td {
+      font-weight: bold;
+    }
+    .closed-text {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* 📝 Testimonials */
+    .testimonials {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .testimonial {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 15px;
+      max-width: 280px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      font-style: italic;
+    }
+    .testimonial strong {
+      display: block;
+      margin-top: 10px;
+      color: #004aad;
+      text-align: right;
+      font-style: normal;
+    }
+
+    /* 🔴 Blinking Red Links Section */
+    .links-section {
+      text-align: center;
+    }
+    .links-section p a {
+      color: red;
+      font-size: 18px;
+      font-weight: bold;
+      text-decoration: none;
+      animation: blink 1.5s infinite;
+    }
+    .links-section p a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      margin-top: 20px;
+      background-color: #004aad;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🏁 Hero Banner -->
+  <header>
+    <h1>New Sri Raja Driving School</h1>
+    <p>Learn driving with confidence 🚗</p>
+    <div class="alert-banner">🚨 ALERT TODAY, ALIVE TOMORROW 🚨</div>
+  </header>
+
+  <!-- 📝 About -->
+  <section class="section about">
+    <h2>About Us</h2>
+    <p>We care about the success of our students and aim to create safe and knowledgeable drivers to make Vizianagaram District a safer place to drive.</p>
+  </section>
+
+  <!-- 🧭 Why to Choose Us -->
+  <section class="section">
+    <h2>Why Choose Us</h2>
+    <div class="features">
+      <div class="feature-card">
+        <h3>✅ Expert Trainer</h3>
+        <p>Certified instructor with 30+ years of experience.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🚘 Practical Learning</h3>
+        <p>On-road training sessions for real experience.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📝 License Support</h3>
+        <p>Complete assistance for learner and permanent licenses.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 📅 Timings & Schedule -->
+  <section class="section">
+    <h2>Timings & Schedule</h2>
+    <table>
+      <tr>
+        <th>Day</th>
+        <th>Morning Batch</th>
+        <th>Noon Batch</th>
+      </tr>
+      <tr>
+        <td>Monday - Saturday</td>
+        <td>6:00 AM - 12:00 PM</td>
+        <td>1:00 PM - 6:00 PM</td>
+      </tr>
+      <tr>
+        <td>Sunday</td>
+        <td colspan="2" class="closed-text">Closed</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 📞 Contact -->
+  <section class="section contact">
+    <h2>Contact Us</h2>
+    <p><strong>Phone:</strong> <a href="tel:+919494331119">+91 9494331119 , 9440754257</a></p>
+    <p><strong>Address:</strong> Beside Apollo Pharmacy, opposite Godrej Interio, Dasannapet, Vizianagaram</p>
+  </section>
+
+  <!-- 📝 Testimonials -->
+  <section class="section">
+    <h2>What Our Students Say</h2>
+    <div class="testimonials">
+      <div class="testimonial">
+        “Excellent training and good explanation by Ganesh sir. Got confidence to drive a car and also got training in traffic too.”
+        <strong>- Phaniraj</strong>
+      </div>
+      <div class="testimonial">
+        “Very good teaching, explains everything with patience to make sure the learners understand.”
+        <strong>- Naziya</strong>
+      </div>
+      <div class="testimonial">
+        “I strongly recommend Ganesh sir. Very professional and talented. I didn't even know the basics but he made me drive confidently in traffic.”
+        <strong>- Sri Lakshmi</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- 📚 Useful Links Section -->
+  <section class="section links-section">
+    <h2>📚 Driving School Resources</h2>
+    <p>
+      <a href="https://www.aptransport.org/html/llr-question-bank.html" target="_blank">
+        LLR QUESTION BANK
+      </a>
+    </p>
+    <p>
+      <a href="http://m.driving-tests.in/" target="_blank">
+        MOCK TESTS
+      </a>
+    </p>
+  </section>
+
+  <footer>
+    © 2025 New Sri Raja Driving School. All Rights Reserved.
+  </footer>
+
+</body>
+</html>
