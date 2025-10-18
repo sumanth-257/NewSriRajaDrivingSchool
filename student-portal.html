@@ -1,23 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Student Attendance Portal</title>
 <style>
-body { font-family:'Segoe UI',sans-serif; background:#f8fafc; color:#1e293b; margin:0; }
-header { background:#1e3a8a; color:white; text-align:center; padding:20px; }
-form { max-width:500px; margin:30px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-label { font-weight:600; display:block; margin-top:15px; }
-input, select { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; }
-button { margin-top:20px; width:100%; background:#1e3a8a; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:600; }
-button:hover { background:#3b82f6; }
-#info { margin-top:15px; text-align:center; font-weight:600; }
-#studentInfo p { margin:5px 0; }
+  body { font-family:'Segoe UI',sans-serif; background:#f8fafc; color:#1e293b; margin:0; }
+  header { background:#1e3a8a; color:white; text-align:center; padding:20px; }
+  form { max-width:520px; margin:30px auto; background:white; padding:26px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+  label { font-weight:600; display:block; margin-top:12px; }
+  input, select { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; }
+  button { margin-top:18px; width:100%; background:#1e3a8a; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:700; }
+  button[disabled] { opacity:0.65; cursor:not-allowed; }
+  #info { margin-top:12px; text-align:center; font-weight:600; }
+  #studentInfo p { margin:5px 0; }
 </style>
 </head>
 <body>
-
 <header>
   <h1>🎓 Student Attendance Portal</h1>
   <p>New Sri Raja Driving School</p>
@@ -46,7 +45,7 @@ button:hover { background:#3b82f6; }
 </form>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaHO3ZRXdApDnbR49TJUh6IGOry9Rd2vh5_S9GnllZuffvuP7Q3y5MwKHSmFTwkERz/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfNkbpjmrYj4TpM-XBUxvWJ0xOvIhJCE4mrsz0TQsOZzL_zJ0s0xFrv7PKtHS5TWfb/exec"; 
 
 const phoneInput = document.getElementById("phone");
 const verifyBtn = document.getElementById("verifyBtn");
@@ -57,46 +56,50 @@ const timingLabel = document.getElementById("timingLabel");
 const timingSelect = document.getElementById("timing");
 
 let isVerified = false;
+let lastVerifiedPhone = null;
 
-// Clear on input change
-phoneInput.addEventListener("input", () => {
-  if (isVerified) {
-    isVerified = false;
-    markBtn.disabled = true;
-    markBtn.textContent = "Mark Attendance";
-    studentInfoDiv.style.display = "none";
-    timingLabel.style.display = "none";
-    timingSelect.style.display = "none";
-    info.textContent = "";
-  }
-});
+// Reset helper
+function resetFormUI() {
+  isVerified = false;
+  lastVerifiedPhone = null;
+  markBtn.disabled = true;
+  markBtn.textContent = "Mark Attendance";
+  studentInfoDiv.style.display = "none";
+  timingLabel.style.display = "none";
+  timingSelect.style.display = "none";
+  info.textContent = "";
+  // keep phone input value or clear as desired:
+  phoneInput.value = "";
+}
 
-// Prevent Enter key from submitting form accidentally
+// Prevent Enter submitting
 phoneInput.addEventListener("keydown", (ev) => {
   if (ev.key === "Enter") ev.preventDefault();
 });
 
+// Clear verification when phone changes
+phoneInput.addEventListener("input", () => {
+  if (isVerified) {
+    resetFormUI();
+  }
+});
+
+// Verify student
 verifyBtn.addEventListener("click", () => {
   const phone = phoneInput.value.trim();
-  if (phone === "") {
-    info.textContent = "⚠️ Please enter phone number.";
-    return;
-  }
+  if (!phone) { info.textContent = "⚠️ Enter phone number."; return; }
 
-  info.textContent = "Verifying student...";
+  info.textContent = "Verifying...";
   fetch(`${SCRIPT_URL}?phone=${encodeURIComponent(phone)}`)
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
-      if (data.status === "NOT_REGISTERED") {
+      if (!data || data.status === "NOT_REGISTERED") {
         info.textContent = "❌ Not a registered student!";
-        isVerified = false;
-        markBtn.disabled = true;
-        markBtn.textContent = "Mark Attendance";
-        studentInfoDiv.style.display = "none";
-        timingLabel.style.display = "none";
-        timingSelect.style.display = "none";
-      } else {
-        // Populate student details
+        resetFormUI();
+        return;
+      }
+      if (data.status === "FOUND") {
+        // show student details
         document.getElementById("studentName").textContent = data.name;
         document.getElementById("studentCourse").textContent = data.course;
         document.getElementById("studentTaken").textContent = data.taken;
@@ -104,91 +107,119 @@ verifyBtn.addEventListener("click", () => {
         studentInfoDiv.style.display = "block";
         info.textContent = "";
 
-        // Build timing dropdown
-        timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
-        const times = [];
-        for (let h = 6; h <= 18; h++) {
-          const ampm = h < 12 ? "AM" : "PM";
-          times.push(`${h > 12 ? h - 12 : h}:00 ${ampm}`);
-          times.push(`${h > 12 ? h - 12 : h}:30 ${ampm}`);
-        }
-        times.forEach(t => {
-          const opt = document.createElement("option");
-          opt.value = t;
-          opt.textContent = t;
-          timingSelect.appendChild(opt);
-        });
-
-        // Enable button
-        isVerified = true;
-        markBtn.disabled = false;
-        markBtn.textContent = "Submit Attendance";
-
+        // build timing options based on course
+        buildTimingOptions(String(data.course || ""));
         timingLabel.style.display = "block";
         timingSelect.style.display = "block";
+
+        // enable submission
+        isVerified = true;
+        lastVerifiedPhone = phone;
+        markBtn.disabled = false;
+        markBtn.textContent = "Submit Attendance";
+      } else {
+        info.textContent = "⚠️ Unexpected response. Try again.";
       }
     })
     .catch(() => {
       info.textContent = "⚠️ Error verifying student.";
-      markBtn.disabled = true;
     });
 });
 
-// Submit Attendance
-document.getElementById("attendanceForm").addEventListener("submit", e => {
+// Build timing options depending on course
+function buildTimingOptions(course) {
+  timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
+  const lower = String(course || "").toLowerCase();
+  if (lower.includes("fast")) {
+    // Fast Track: hourly slots 6:00 AM to 5:00 PM (6..17)
+    for (let h = 6; h <= 17; h++) {
+      const ampm = h < 12 ? "AM" : "PM";
+      const displayHour = h > 12 ? h - 12 : h;
+      const label = `${displayHour}:00 ${ampm}`;
+      const opt = document.createElement("option");
+      opt.value = label;
+      opt.textContent = label;
+      timingSelect.appendChild(opt);
+    }
+  } else {
+    // Standard: half-hour slots 6:00 AM to 5:30 PM (6..17 each hour two slots)
+    for (let h = 6; h <= 17; h++) {
+      const ampm = h < 12 ? "AM" : "PM";
+      const displayHour = h > 12 ? h - 12 : h;
+      const lab1 = `${displayHour}:00 ${ampm}`;
+      const lab2 = `${displayHour}:30 ${ampm}`;
+      const o1 = document.createElement("option");
+      o1.value = lab1;
+      o1.textContent = lab1;
+      timingSelect.appendChild(o1);
+      const o2 = document.createElement("option");
+      o2.value = lab2;
+      o2.textContent = lab2;
+      timingSelect.appendChild(o2);
+    }
+  }
+}
+
+// Submit Attendance (goes to PendingAttendance)
+document.getElementById("attendanceForm").addEventListener("submit", (e) => {
   e.preventDefault();
 
-  if (!isVerified) {
-    info.textContent = "⚠️ Please verify the student first.";
-    return;
-  }
-
+  if (!isVerified) { info.textContent = "⚠️ Please verify the student first."; return; }
   const phone = phoneInput.value.trim();
-  const timing = timingSelect.value;
-  if (!timing) {
-    info.textContent = "⚠️ Please select your class timing.";
+  if (phone !== lastVerifiedPhone) {
+    info.textContent = "⚠️ Phone changed. Please verify again.";
+    resetFormUI();
     return;
   }
 
+  const timing = timingSelect.value;
+  if (!timing) { info.textContent = "⚠️ Select your timing."; return; }
+
+  // prepare form data
   markBtn.disabled = true;
   markBtn.textContent = "Submitting...";
   info.textContent = "";
 
-  const formData = new FormData();
-  formData.append("phone", phone);
-  formData.append("timing", timing);
+  const fd = new FormData();
+  fd.append("phone", phone);
+  fd.append("timing", timing);
 
-  fetch(SCRIPT_URL, { method: "POST", body: formData })
-    .then(res => res.text())
-    .then(text => {
-      if (text === "PENDING_APPROVAL") {
+  fetch(SCRIPT_URL, { method: "POST", body: fd })
+    .then(r => r.text())
+    .then(txt => {
+      const t = (txt || "").trim();
+      if (t === "PENDING_APPROVAL") {
         markBtn.textContent = "✅ Attendance Submitted (Pending Admin Approval)";
-        info.textContent = "Your attendance has been sent for approval.";
-      } 
-      else if (text === "SUCCESS") {
+        info.textContent = "Your attendance has been submitted for admin approval.";
+      } else if (t === "SUCCESS") {
         markBtn.textContent = "✅ Attendance Recorded";
         info.textContent = "Attendance recorded successfully!";
-      }
-      else if (text === "LIMIT_REACHED") {
+      } else if (t === "ALREADY_PENDING") {
+        markBtn.textContent = "⚠️ Already Pending";
+        info.textContent = "You already submitted attendance for today, pending approval.";
+      } else if (t === "LIMIT_REACHED") {
         markBtn.textContent = "⚠️ Limit Reached";
-        info.textContent = "All classes completed!";
-      } 
-      else if (text === "NOT_REGISTERED") {
+        info.textContent = "All classes already completed.";
+      } else if (t === "NOT_REGISTERED") {
         markBtn.textContent = "❌ Not Registered";
-        info.textContent = "You are not in the records.";
-      } 
-      else {
+        info.textContent = "You are not registered.";
+      } else if (t === "NO_TIMING_SELECTED") {
+        markBtn.textContent = "⚠️ Select Timing";
+        info.textContent = "Select a timing before submitting.";
+      } else {
         markBtn.textContent = "❌ Error Occurred";
-        info.textContent = "Something went wrong. Try again.";
+        info.textContent = "Something went wrong: " + t;
       }
     })
     .catch(() => {
       markBtn.textContent = "⚠️ Connection Error";
       info.textContent = "Could not connect to server.";
+    })
+    .finally(() => {
+      // keep the button disabled to avoid double submissions; admin will approve later
+      markBtn.disabled = true;
     });
 });
 </script>
-
-
 </body>
 </html>
