@@ -1,129 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Admin - Approve Attendance</title>
+<meta charset="UTF-8">
+<title>Admin Attendance Approval</title>
 <style>
-  body { font-family:'Segoe UI',sans-serif; background:#f1f5f9; margin:0; padding:0; }
-  header { background:#0f172a; color:white; padding:16px; text-align:center; }
-  .container { max-width:900px; margin:28px auto; background:white; padding:18px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
-  input, button { padding:10px; border-radius:8px; border:1px solid #cbd5e1; }
-  button { background:#1e40af; color:white; border:none; cursor:pointer; font-weight:700; }
-  table { width:100%; border-collapse:collapse; margin-top:12px; }
-  th, td { border:1px solid #e6edf3; padding:10px; text-align:center; }
-  th { background:#1e40af; color:white; }
-  .small { font-size:13px; color:#334155; }
+body { font-family:'Segoe UI',sans-serif; background:#f1f5f9; margin:0; padding:0; }
+header { background:#0f172a; color:white; padding:15px; text-align:center; }
+#loginBox, #recordsBox { max-width:700px; margin:40px auto; background:white; padding:20px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+th, td { border:1px solid #cbd5e1; padding:8px; text-align:center; }
+button { background:#1e40af; color:white; border:none; padding:6px 10px; border-radius:5px; cursor:pointer; }
+button:hover { background:#3b82f6; }
+button.deny { background:#dc2626; }
+button.deny:hover { background:#ef4444; }
 </style>
 </head>
 <body>
-<header><h2>🧾 Admin - Approve Attendance</h2></header>
-<div class="container">
-  <div style="text-align:center;">
-    <input type="password" id="password" placeholder="Enter admin password" />
-    <button id="loadBtn">Load Pending</button>
-    <p id="loginStatus" class="small"></p>
-  </div>
+<header><h2>Admin - Approve / Deny Attendance</h2></header>
 
-  <div id="pendingArea" style="margin-top:18px;">
-    <table id="pendingTable">
-      <thead>
-        <tr>
-          <th>Date</th><th>Phone</th><th>Name</th><th>Course</th><th>Timing</th><th>Action</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+<div id="loginBox">
+  <label>Enter Admin Password:</label>
+  <input type="password" id="password" placeholder="Enter password">
+  <button onclick="login()">Login</button>
+  <p id="loginStatus"></p>
+</div>
+
+<div id="recordsBox" style="display:none;">
+  <h3>Pending Attendance Requests</h3>
+  <table id="pendingTable">
+    <thead>
+      <tr><th>Date</th><th>Phone</th><th>Name</th><th>Course</th><th>Timing</th><th>Actions</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfNkbpjmrYj4TpM-XBUxvWJ0xOvIhJCE4mrsz0TQsOZzL_zJ0s0xFrv7PKtHS5TWfb/exec"; 
+const SCRIPT_URL = "YOUR_SCRIPT_WEBAPP_URL";
 
-document.getElementById("loadBtn").addEventListener("click", loadPending);
-
-function loadPending() {
+function login() {
   const pass = document.getElementById("password").value.trim();
-  if (!pass) { document.getElementById("loginStatus").textContent = "Enter password."; return; }
-  document.getElementById("loginStatus").textContent = "Loading...";
-  fetch(`${SCRIPT_URL}?action=pending&password=${encodeURIComponent(pass)}`)
-    .then(r => r.json())
+  if (!pass) return;
+  document.getElementById("loginStatus").textContent = "Verifying...";
+  fetch(`${SCRIPT_URL}?password=${encodeURIComponent(pass)}&action=pending`)
+    .then(res => res.json())
     .then(data => {
-      if (!data) { document.getElementById("loginStatus").textContent = "No response."; return; }
       if (data.status === "UNAUTHORIZED") {
-        document.getElementById("loginStatus").textContent = "❌ Wrong password.";
-        return;
+        document.getElementById("loginStatus").textContent = "❌ Wrong password!";
+      } else {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("recordsBox").style.display = "block";
+        loadPending(data.records);
       }
-      document.getElementById("loginStatus").textContent = `Loaded ${data.records.length} pending record(s).`;
-      populateTable(data.records);
-    })
-    .catch(err => {
-      document.getElementById("loginStatus").textContent = "Error loading pending records.";
-      console.error(err);
     });
 }
 
-function populateTable(rows) {
+function loadPending(records) {
   const tbody = document.querySelector("#pendingTable tbody");
   tbody.innerHTML = "";
-  rows.forEach(r => {
+  if (records.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6'>✅ No pending records</td></tr>";
+    return;
+  }
+  records.forEach(r => {
     const tr = document.createElement("tr");
-    // date is ISO string from server
-    const dateText = r.date ? new Date(r.date).toLocaleString() : "";
     tr.innerHTML = `
-      <td>${dateText}</td>
-      <td>${escapeHtml(r.phone)}</td>
-      <td>${escapeHtml(r.name)}</td>
-      <td>${escapeHtml(r.course)}</td>
-      <td>${escapeHtml(r.timing)}</td>
+      <td>${new Date(r.date).toLocaleString()}</td>
+      <td>${r.phone}</td>
+      <td>${r.name}</td>
+      <td>${r.course}</td>
+      <td>${r.timing}</td>
       <td>
-        <button onclick="approve('${encodeURIComponent(r.phone)}','${encodeURIComponent(r.date)}', this)">Approve</button>
+        <button onclick="approve('${r.phone}','${r.date}')">Approve</button>
+        <button class="deny" onclick="deny('${r.phone}','${r.date}')">Deny</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// Approve function: sends POST action=approve; on success removes row
-function approve(encodedPhone, encodedDate, btn) {
-  const phone = decodeURIComponent(encodedPhone || "");
-  const date = decodeURIComponent(encodedDate || "");
-  btn.disabled = true;
-  btn.textContent = "Approving...";
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    body: new URLSearchParams({ action: "approve", phone: phone, date: date })
-  })
-  .then(r => r.text())
-  .then(txt => {
-    const t = (txt || "").trim();
-    if (t === "APPROVED") {
-      // remove row from table (btn is inside the cell)
-      const row = btn.closest("tr");
-      if (row) row.remove();
-      alert("✅ Approved and moved to Attendance.");
-      // update status text
-      const s = document.getElementById("loginStatus");
-      s.textContent = "Approved successfully.";
-    } else {
-      alert("⚠️ Could not approve: " + t);
-      btn.disabled = false;
-      btn.textContent = "Approve";
-    }
-  })
-  .catch(() => {
-    alert("Network error approving.");
-    btn.disabled = false;
-    btn.textContent = "Approve";
-  });
+function approve(phone, dateVal) {
+  fetch(`${SCRIPT_URL}?action=approve&phone=${encodeURIComponent(phone)}&date=${encodeURIComponent(dateVal)}`, { method: "POST" })
+    .then(res => res.text())
+    .then(() => { alert("✅ Approved!"); location.reload(); });
 }
 
-// small helper to avoid HTML injection
-function escapeHtml(s) {
-  if (!s) return "";
-  return String(s).replace(/[&<>"']/g, function(m) {
-    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
-  });
+function deny(phone, dateVal) {
+  fetch(`${SCRIPT_URL}?action=deny&phone=${encodeURIComponent(phone)}&date=${encodeURIComponent(dateVal)}`, { method: "POST" })
+    .then(res => res.text())
+    .then(() => { alert("❌ Request Denied"); location.reload(); });
 }
 </script>
 </body>
