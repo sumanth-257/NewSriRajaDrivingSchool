@@ -9,10 +9,11 @@ body { font-family:'Segoe UI',sans-serif; background:#f8fafc; color:#1e293b; mar
 header { background:#1e3a8a; color:white; text-align:center; padding:20px; }
 form { max-width:500px; margin:30px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
 label { font-weight:600; display:block; margin-top:15px; }
-input { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; }
+input, select { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; }
 button { margin-top:20px; width:100%; background:#1e3a8a; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:600; }
 button:hover { background:#3b82f6; }
 #info { margin-top:15px; text-align:center; font-weight:600; }
+#studentInfo p { margin:5px 0; }
 </style>
 </head>
 <body>
@@ -31,6 +32,12 @@ button:hover { background:#3b82f6; }
     <p><strong>Course:</strong> <span id="studentCourse"></span></p>
     <p><strong>Classes Taken:</strong> <span id="studentTaken"></span></p>
     <p><strong>Remaining:</strong> <span id="studentRemaining"></span></p>
+
+    <!-- Timing dropdown (auto-generated later) -->
+    <label>Choose Class Timing</label>
+    <select id="timing" name="timing" required>
+      <option value="">-- Select Timing --</option>
+    </select>
   </div>
 
   <button type="submit">Mark Attendance</button>
@@ -42,6 +49,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnc1kVhvstCb5jE3g-9
 const phoneInput = document.getElementById("phone");
 const info = document.getElementById("info");
 const studentInfoDiv = document.getElementById("studentInfo");
+const timingSelect = document.getElementById("timing");
 
 phoneInput.addEventListener("blur", () => {
   const phone = phoneInput.value.trim();
@@ -60,13 +68,44 @@ phoneInput.addEventListener("blur", () => {
         document.getElementById("studentRemaining").textContent = data.remaining;
         studentInfoDiv.style.display = "block";
         info.textContent = "";
+
+        // Update timing dropdown dynamically
+        updateTimingDropdown(data.course);
       }
-    });
+    })
+    .catch(() => info.textContent = "Error checking student.");
 });
+
+// Function to populate timing options based on course
+function updateTimingDropdown(course) {
+  timingSelect.innerHTML = '<option value="">-- Select Timing --</option>';
+
+  const startHour = 6;
+  const endHour = 18;
+  const interval = (course === "FastTrack") ? 60 : 30; // mins per slot
+
+  for (let hour = startHour; hour <= endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += interval) {
+      const displayHour = (hour > 12) ? hour - 12 : hour;
+      const ampm = (hour >= 12) ? "PM" : "AM";
+      const time = `${displayHour}:${minute.toString().padStart(2, "0")} ${ampm}`;
+      const option = document.createElement("option");
+      option.value = time;
+      option.textContent = time;
+      timingSelect.appendChild(option);
+    }
+  }
+}
 
 document.getElementById("attendanceForm").addEventListener("submit", e => {
   e.preventDefault();
   const phone = phoneInput.value.trim();
+  const timing = timingSelect.value;
+  if (!timing) {
+    info.textContent = "⚠️ Please select a timing.";
+    return;
+  }
+
   info.textContent = "Submitting attendance...";
   fetch(SCRIPT_URL, { method:"POST", body:new FormData(e.target) })
     .then(res => res.text())
