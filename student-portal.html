@@ -56,13 +56,14 @@ const studentInfoDiv = document.getElementById("studentInfo");
 const timingLabel = document.getElementById("timingLabel");
 const timingSelect = document.getElementById("timing");
 
-let isVerified = false; // only true after successful Verify
+let isVerified = false;
 
-// Clear verification when phone value changes
+// Clear on input change
 phoneInput.addEventListener("input", () => {
   if (isVerified) {
     isVerified = false;
     markBtn.disabled = true;
+    markBtn.textContent = "Mark Attendance";
     studentInfoDiv.style.display = "none";
     timingLabel.style.display = "none";
     timingSelect.style.display = "none";
@@ -70,13 +71,9 @@ phoneInput.addEventListener("input", () => {
   }
 });
 
-// Prevent Enter key from submitting form when focus is in phone input
+// Prevent Enter key from submitting form accidentally
 phoneInput.addEventListener("keydown", (ev) => {
-  if (ev.key === "Enter") {
-    ev.preventDefault();
-    // Optionally trigger verify automatically:
-    // verifyBtn.click();
-  }
+  if (ev.key === "Enter") ev.preventDefault();
 });
 
 verifyBtn.addEventListener("click", () => {
@@ -94,11 +91,12 @@ verifyBtn.addEventListener("click", () => {
         info.textContent = "❌ Not a registered student!";
         isVerified = false;
         markBtn.disabled = true;
+        markBtn.textContent = "Mark Attendance";
         studentInfoDiv.style.display = "none";
         timingLabel.style.display = "none";
         timingSelect.style.display = "none";
       } else {
-        // Populate UI
+        // Populate student details
         document.getElementById("studentName").textContent = data.name;
         document.getElementById("studentCourse").textContent = data.course;
         document.getElementById("studentTaken").textContent = data.taken;
@@ -106,21 +104,13 @@ verifyBtn.addEventListener("click", () => {
         studentInfoDiv.style.display = "block";
         info.textContent = "";
 
-        // Build timing dropdown (fresh)
+        // Build timing dropdown
         timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
         const times = [];
-        if (String(data.course).toLowerCase().includes("fast")) {
-          for (let h = 6; h <= 18; h++) {
-            const ampm = h < 12 ? "AM" : "PM";
-            const display = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
-            times.push(display);
-          }
-        } else {
-          for (let h = 6; h <= 18; h++) {
-            const ampm = h < 12 ? "AM" : "PM";
-            times.push(`${h > 12 ? h - 12 : h}:00 ${ampm}`);
-            times.push(`${h > 12 ? h - 12 : h}:30 ${ampm}`);
-          }
+        for (let h = 6; h <= 18; h++) {
+          const ampm = h < 12 ? "AM" : "PM";
+          times.push(`${h > 12 ? h - 12 : h}:00 ${ampm}`);
+          times.push(`${h > 12 ? h - 12 : h}:30 ${ampm}`);
         }
         times.forEach(t => {
           const opt = document.createElement("option");
@@ -129,9 +119,10 @@ verifyBtn.addEventListener("click", () => {
           timingSelect.appendChild(opt);
         });
 
-        // mark as verified and enable mark button
+        // Enable button
         isVerified = true;
         markBtn.disabled = false;
+        markBtn.textContent = "Submit Attendance";
 
         timingLabel.style.display = "block";
         timingSelect.style.display = "block";
@@ -139,12 +130,11 @@ verifyBtn.addEventListener("click", () => {
     })
     .catch(() => {
       info.textContent = "⚠️ Error verifying student.";
-      isVerified = false;
       markBtn.disabled = true;
     });
 });
 
-// Form submit: enforce verification + timing
+// Submit Attendance
 document.getElementById("attendanceForm").addEventListener("submit", e => {
   e.preventDefault();
 
@@ -156,12 +146,13 @@ document.getElementById("attendanceForm").addEventListener("submit", e => {
   const phone = phoneInput.value.trim();
   const timing = timingSelect.value;
   if (!timing) {
-    info.textContent = "⚠️ Please select your class timing before submitting.";
+    info.textContent = "⚠️ Please select your class timing.";
     return;
   }
 
-  markBtn.disabled = true; // prevent double submissions
-  info.textContent = "Submitting attendance...";
+  markBtn.disabled = true;
+  markBtn.textContent = "Submitting...";
+  info.textContent = "";
 
   const formData = new FormData();
   formData.append("phone", phone);
@@ -170,31 +161,34 @@ document.getElementById("attendanceForm").addEventListener("submit", e => {
   fetch(SCRIPT_URL, { method: "POST", body: formData })
     .then(res => res.text())
     .then(text => {
-      if (text === "SUCCESS") {
-        info.textContent = "✅ Attendance recorded!";
-        // reset UI & verification
-        isVerified = false;
-        markBtn.disabled = true;
-        studentInfoDiv.style.display = "none";
-        timingLabel.style.display = "none";
-        timingSelect.style.display = "none";
-        phoneInput.value = "";
-      } else if (text === "LIMIT_REACHED") {
-        info.textContent = "⚠️ All 20 classes completed!";
-      } else if (text === "NOT_REGISTERED") {
-        info.textContent = "❌ Not registered!";
-      } else {
-        info.textContent = "❌ Unknown error.";
+      if (text === "PENDING_APPROVAL") {
+        markBtn.textContent = "✅ Attendance Submitted (Pending Admin Approval)";
+        info.textContent = "Your attendance has been sent for approval.";
+      } 
+      else if (text === "SUCCESS") {
+        markBtn.textContent = "✅ Attendance Recorded";
+        info.textContent = "Attendance recorded successfully!";
+      }
+      else if (text === "LIMIT_REACHED") {
+        markBtn.textContent = "⚠️ Limit Reached";
+        info.textContent = "All classes completed!";
+      } 
+      else if (text === "NOT_REGISTERED") {
+        markBtn.textContent = "❌ Not Registered";
+        info.textContent = "You are not in the records.";
+      } 
+      else {
+        markBtn.textContent = "❌ Error Occurred";
+        info.textContent = "Something went wrong. Try again.";
       }
     })
     .catch(() => {
-      info.textContent = "⚠️ Error connecting to server.";
-    })
-    .finally(() => {
-      markBtn.disabled = false;
+      markBtn.textContent = "⚠️ Connection Error";
+      info.textContent = "Could not connect to server.";
     });
 });
 </script>
+
 
 </body>
 </html>
