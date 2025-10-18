@@ -27,20 +27,21 @@ button:hover { background:#3b82f6; }
   <label>Phone Number</label>
   <input type="text" id="phone" name="phone" required>
 
+  <button type="button" id="verifyBtn">🔍 Verify Student</button>
+
   <div id="studentInfo" style="display:none;">
     <p><strong>Name:</strong> <span id="studentName"></span></p>
     <p><strong>Course:</strong> <span id="studentCourse"></span></p>
     <p><strong>Classes Taken:</strong> <span id="studentTaken"></span></p>
     <p><strong>Remaining:</strong> <span id="studentRemaining"></span></p>
-
-    <!-- Timing dropdown (auto-generated later) -->
-    <label>Choose Class Timing</label>
-    <select id="timing" name="timing" required>
-      <option value="">-- Select Timing --</option>
-    </select>
   </div>
 
-  <button type="submit">Mark Attendance</button>
+  <label id="timingLabel" style="display:none;">Select Timing</label>
+  <select id="timing" name="timing" style="display:none;">
+    <option value="">-- Select Timing --</option>
+  </select>
+
+  <button type="submit" id="markBtn" disabled>Mark Attendance</button>
   <div id="info"></div>
 </form>
 
@@ -48,26 +49,21 @@ button:hover { background:#3b82f6; }
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnc1kVhvstCb5jE3g-97TobzmTL_B1emC_cyfRlByFRXanTMmZIK22lL0_4qQE-a8x/exec";
 
 const phoneInput = document.getElementById("phone");
+const verifyBtn = document.getElementById("verifyBtn");
+const markBtn = document.getElementById("markBtn");
 const info = document.getElementById("info");
 const studentInfoDiv = document.getElementById("studentInfo");
-const timingLabel = document.createElement("label");
-const timingSelect = document.createElement("select");
+const timingLabel = document.getElementById("timingLabel");
+const timingSelect = document.getElementById("timing");
 
-// Add dropdown styling
-timingLabel.textContent = "Select Timing";
-timingLabel.style.display = "none";
-timingSelect.id = "timing";
-timingSelect.style.display = "none";
-timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
-document.getElementById("attendanceForm").insertBefore(timingLabel, document.getElementById("info"));
-document.getElementById("attendanceForm").insertBefore(timingSelect, document.getElementById("info"));
-
-// When phone input loses focus (blur event)
-phoneInput.addEventListener("blur", () => {
+verifyBtn.addEventListener("click", () => {
   const phone = phoneInput.value.trim();
-  if (phone === "") return;
-  info.textContent = "Checking student...";
+  if (phone === "") {
+    info.textContent = "⚠️ Please enter phone number.";
+    return;
+  }
   
+  info.textContent = "Verifying student...";
   fetch(`${SCRIPT_URL}?phone=${phone}`)
     .then(res => res.json())
     .then(data => {
@@ -76,6 +72,7 @@ phoneInput.addEventListener("blur", () => {
         studentInfoDiv.style.display = "none";
         timingLabel.style.display = "none";
         timingSelect.style.display = "none";
+        markBtn.disabled = true;
       } else {
         document.getElementById("studentName").textContent = data.name;
         document.getElementById("studentCourse").textContent = data.course;
@@ -84,18 +81,16 @@ phoneInput.addEventListener("blur", () => {
         studentInfoDiv.style.display = "block";
         info.textContent = "";
 
-        // Populate timing dropdown dynamically
+        // Build timing dropdown dynamically
         timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
         let times = [];
         if (data.course.toLowerCase().includes("fast")) {
-          // Fast Track → hourly slots
           for (let h = 6; h <= 18; h++) {
             let ampm = h < 12 ? "AM" : "PM";
             let display = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
             times.push(display);
           }
         } else {
-          // Standard → half-hour slots
           for (let h = 6; h <= 18; h++) {
             let ampm = h < 12 ? "AM" : "PM";
             let display1 = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
@@ -113,11 +108,13 @@ phoneInput.addEventListener("blur", () => {
 
         timingLabel.style.display = "block";
         timingSelect.style.display = "block";
+        markBtn.disabled = false;
       }
-    });
+    })
+    .catch(() => info.textContent = "⚠️ Error verifying student.");
 });
 
-// Handle form submission
+// Submit attendance
 document.getElementById("attendanceForm").addEventListener("submit", e => {
   e.preventDefault();
   const phone = phoneInput.value.trim();
@@ -128,22 +125,29 @@ document.getElementById("attendanceForm").addEventListener("submit", e => {
     return;
   }
 
+  markBtn.disabled = true; // prevent double-clicks
   info.textContent = "Submitting attendance...";
-  const formData = new FormData(e.target);
+  const formData = new FormData();
+  formData.append("phone", phone);
   formData.append("timing", timing);
 
   fetch(SCRIPT_URL, { method: "POST", body: formData })
     .then(res => res.text())
     .then(text => {
-      if (text === "SUCCESS") info.textContent = "✅ Attendance recorded!";
-      else if (text === "LIMIT_REACHED") info.textContent = "⚠️ All 20 classes completed!";
+      if (text === "SUCCESS") {
+        info.textContent = "✅ Attendance recorded!";
+        studentInfoDiv.style.display = "none";
+        timingLabel.style.display = "none";
+        timingSelect.style.display = "none";
+        phoneInput.value = "";
+      } else if (text === "LIMIT_REACHED") info.textContent = "⚠️ All 20 classes completed!";
       else if (text === "NOT_REGISTERED") info.textContent = "❌ Not registered!";
       else info.textContent = "❌ Unknown error.";
     })
-    .catch(() => info.textContent = "Error connecting to server.");
+    .catch(() => info.textContent = "⚠️ Error connecting to server.")
+    .finally(() => markBtn.disabled = false);
 });
 </script>
-
 
 </body>
 </html>
