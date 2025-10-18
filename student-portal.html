@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Attendance Portal</title>
 <style>
-  body { font-family:'Segoe UI',sans-serif; background:#f8fafc; color:#1e293b; margin:0; }
-  header { background:#1e3a8a; color:white; text-align:center; padding:20px; }
-  form { max-width:520px; margin:30px auto; background:white; padding:26px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
-  label { font-weight:600; display:block; margin-top:12px; }
-  input, select { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; }
-  button { margin-top:18px; width:100%; background:#1e3a8a; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:700; }
-  button[disabled] { opacity:0.65; cursor:not-allowed; }
-  #info { margin-top:12px; text-align:center; font-weight:600; }
-  #studentInfo p { margin:5px 0; }
+body { font-family:'Segoe UI',sans-serif; background:#f8fafc; color:#1e293b; margin:0; }
+header { background:#1e3a8a; color:white; text-align:center; padding:20px; }
+form { max-width:500px; margin:30px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+label { font-weight:600; display:block; margin-top:15px; }
+input, select { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; }
+button { margin-top:20px; width:100%; background:#1e3a8a; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:600; }
+button:hover { background:#3b82f6; }
+#info { margin-top:15px; text-align:center; font-weight:600; }
+#studentInfo p { margin:5px 0; }
 </style>
 </head>
 <body>
+
 <header>
   <h1>🎓 Student Attendance Portal</h1>
   <p>New Sri Raja Driving School</p>
@@ -24,7 +25,7 @@
 
 <form id="attendanceForm" autocomplete="off">
   <label>Phone Number</label>
-  <input type="text" id="phone" name="phone" required autocomplete="off" />
+  <input type="text" id="phone" required />
 
   <button type="button" id="verifyBtn">🔍 Verify Student</button>
 
@@ -36,7 +37,7 @@
   </div>
 
   <label id="timingLabel" style="display:none;">Select Timing</label>
-  <select id="timing" name="timing" style="display:none;">
+  <select id="timing" style="display:none;">
     <option value="">-- Select Timing --</option>
   </select>
 
@@ -45,7 +46,7 @@
 </form>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxfNkbpjmrYj4TpM-XBUxvWJ0xOvIhJCE4mrsz0TQsOZzL_zJ0s0xFrv7PKtHS5TWfb/exec"; 
+const SCRIPT_URL = "YOUR_SCRIPT_WEBAPP_URL";
 
 const phoneInput = document.getElementById("phone");
 const verifyBtn = document.getElementById("verifyBtn");
@@ -56,168 +57,91 @@ const timingLabel = document.getElementById("timingLabel");
 const timingSelect = document.getElementById("timing");
 
 let isVerified = false;
-let lastVerifiedPhone = null;
+let courseType = "";
 
-// Reset helper
-function resetFormUI() {
-  isVerified = false;
-  lastVerifiedPhone = null;
-  markBtn.disabled = true;
-  markBtn.textContent = "Mark Attendance";
-  studentInfoDiv.style.display = "none";
-  timingLabel.style.display = "none";
-  timingSelect.style.display = "none";
-  info.textContent = "";
-  // keep phone input value or clear as desired:
-  phoneInput.value = "";
-}
-
-// Prevent Enter submitting
-phoneInput.addEventListener("keydown", (ev) => {
-  if (ev.key === "Enter") ev.preventDefault();
-});
-
-// Clear verification when phone changes
-phoneInput.addEventListener("input", () => {
-  if (isVerified) {
-    resetFormUI();
-  }
-});
-
-// Verify student
 verifyBtn.addEventListener("click", () => {
   const phone = phoneInput.value.trim();
-  if (!phone) { info.textContent = "⚠️ Enter phone number."; return; }
+  if (!phone) return info.textContent = "⚠️ Please enter phone number.";
 
   info.textContent = "Verifying...";
   fetch(`${SCRIPT_URL}?phone=${encodeURIComponent(phone)}`)
-    .then(r => r.json())
+    .then(res => res.json())
     .then(data => {
-      if (!data || data.status === "NOT_REGISTERED") {
-        info.textContent = "❌ Not a registered student!";
-        resetFormUI();
-        return;
-      }
-      if (data.status === "FOUND") {
-        // show student details
+      if (data.status === "NOT_REGISTERED") {
+        info.textContent = "❌ Not registered.";
+        studentInfoDiv.style.display = "none";
+        markBtn.disabled = true;
+      } else {
+        courseType = data.course;
         document.getElementById("studentName").textContent = data.name;
         document.getElementById("studentCourse").textContent = data.course;
         document.getElementById("studentTaken").textContent = data.taken;
         document.getElementById("studentRemaining").textContent = data.remaining;
         studentInfoDiv.style.display = "block";
-        info.textContent = "";
-
-        // build timing options based on course
-        buildTimingOptions(String(data.course || ""));
-        timingLabel.style.display = "block";
-        timingSelect.style.display = "block";
-
-        // enable submission
+        buildTimingDropdown(courseType);
         isVerified = true;
-        lastVerifiedPhone = phone;
         markBtn.disabled = false;
-        markBtn.textContent = "Submit Attendance";
-      } else {
-        info.textContent = "⚠️ Unexpected response. Try again.";
+        info.textContent = "";
       }
     })
-    .catch(() => {
-      info.textContent = "⚠️ Error verifying student.";
-    });
+    .catch(() => info.textContent = "⚠️ Server error.");
 });
 
-// Build timing options depending on course
-function buildTimingOptions(course) {
+function buildTimingDropdown(course) {
   timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
-  const lower = String(course || "").toLowerCase();
-  if (lower.includes("fast")) {
-    // Fast Track: hourly slots 6:00 AM to 5:00 PM (6..17)
+  const times = [];
+  if (course.toLowerCase().includes("fast")) {
     for (let h = 6; h <= 17; h++) {
       const ampm = h < 12 ? "AM" : "PM";
-      const displayHour = h > 12 ? h - 12 : h;
-      const label = `${displayHour}:00 ${ampm}`;
-      const opt = document.createElement("option");
-      opt.value = label;
-      opt.textContent = label;
-      timingSelect.appendChild(opt);
+      times.push(`${h > 12 ? h - 12 : h}:00 ${ampm}`);
     }
   } else {
-    // Standard: half-hour slots 6:00 AM to 5:30 PM (6..17 each hour two slots)
     for (let h = 6; h <= 17; h++) {
       const ampm = h < 12 ? "AM" : "PM";
-      const displayHour = h > 12 ? h - 12 : h;
-      const lab1 = `${displayHour}:00 ${ampm}`;
-      const lab2 = `${displayHour}:30 ${ampm}`;
-      const o1 = document.createElement("option");
-      o1.value = lab1;
-      o1.textContent = lab1;
-      timingSelect.appendChild(o1);
-      const o2 = document.createElement("option");
-      o2.value = lab2;
-      o2.textContent = lab2;
-      timingSelect.appendChild(o2);
+      times.push(`${h > 12 ? h - 12 : h}:00 ${ampm}`);
+      times.push(`${h > 12 ? h - 12 : h}:30 ${ampm}`);
     }
   }
+  times.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    timingSelect.appendChild(opt);
+  });
+  timingLabel.style.display = "block";
+  timingSelect.style.display = "block";
 }
 
-// Submit Attendance (goes to PendingAttendance)
-document.getElementById("attendanceForm").addEventListener("submit", (e) => {
+document.getElementById("attendanceForm").addEventListener("submit", e => {
   e.preventDefault();
-
-  if (!isVerified) { info.textContent = "⚠️ Please verify the student first."; return; }
+  if (!isVerified) return info.textContent = "⚠️ Verify student first.";
   const phone = phoneInput.value.trim();
-  if (phone !== lastVerifiedPhone) {
-    info.textContent = "⚠️ Phone changed. Please verify again.";
-    resetFormUI();
-    return;
-  }
-
   const timing = timingSelect.value;
-  if (!timing) { info.textContent = "⚠️ Select your timing."; return; }
+  if (!timing) return info.textContent = "⚠️ Please select timing.";
 
-  // prepare form data
   markBtn.disabled = true;
   markBtn.textContent = "Submitting...";
-  info.textContent = "";
+  const formData = new FormData();
+  formData.append("phone", phone);
+  formData.append("timing", timing);
 
-  const fd = new FormData();
-  fd.append("phone", phone);
-  fd.append("timing", timing);
-
-  fetch(SCRIPT_URL, { method: "POST", body: fd })
-    .then(r => r.text())
-    .then(txt => {
-      const t = (txt || "").trim();
-      if (t === "PENDING_APPROVAL") {
-        markBtn.textContent = "✅ Attendance Submitted (Pending Admin Approval)";
-        info.textContent = "Your attendance has been submitted for admin approval.";
-      } else if (t === "SUCCESS") {
-        markBtn.textContent = "✅ Attendance Recorded";
-        info.textContent = "Attendance recorded successfully!";
-      } else if (t === "ALREADY_PENDING") {
-        markBtn.textContent = "⚠️ Already Pending";
-        info.textContent = "You already submitted attendance for today, pending approval.";
-      } else if (t === "LIMIT_REACHED") {
+  fetch(SCRIPT_URL, { method: "POST", body: formData })
+    .then(res => res.text())
+    .then(text => {
+      if (text === "PENDING_REVIEW") {
+        markBtn.textContent = "✅ Attendance Submitted";
+        info.textContent = "Pending admin approval.";
+      } else if (text === "LIMIT_REACHED") {
         markBtn.textContent = "⚠️ Limit Reached";
-        info.textContent = "All classes already completed.";
-      } else if (t === "NOT_REGISTERED") {
-        markBtn.textContent = "❌ Not Registered";
-        info.textContent = "You are not registered.";
-      } else if (t === "NO_TIMING_SELECTED") {
-        markBtn.textContent = "⚠️ Select Timing";
-        info.textContent = "Select a timing before submitting.";
+        info.textContent = "Course limit reached.";
       } else {
-        markBtn.textContent = "❌ Error Occurred";
-        info.textContent = "Something went wrong: " + t;
+        markBtn.textContent = "❌ Error";
+        info.textContent = "Something went wrong.";
       }
     })
     .catch(() => {
-      markBtn.textContent = "⚠️ Connection Error";
-      info.textContent = "Could not connect to server.";
-    })
-    .finally(() => {
-      // keep the button disabled to avoid double submissions; admin will approve later
-      markBtn.disabled = true;
+      markBtn.textContent = "⚠️ Network Error";
+      info.textContent = "Could not connect.";
     });
 });
 </script>
