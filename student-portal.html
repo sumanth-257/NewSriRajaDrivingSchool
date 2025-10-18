@@ -23,9 +23,9 @@ button:hover { background:#3b82f6; }
   <p>New Sri Raja Driving School</p>
 </header>
 
-<form id="attendanceForm">
+<form id="attendanceForm" autocomplete="off">
   <label>Phone Number</label>
-  <input type="text" id="phone" name="phone" required>
+  <input type="text" id="phone" name="phone" required autocomplete="off" />
 
   <button type="button" id="verifyBtn">🔍 Verify Student</button>
 
@@ -56,24 +56,49 @@ const studentInfoDiv = document.getElementById("studentInfo");
 const timingLabel = document.getElementById("timingLabel");
 const timingSelect = document.getElementById("timing");
 
+let isVerified = false; // only true after successful Verify
+
+// Clear verification when phone value changes
+phoneInput.addEventListener("input", () => {
+  if (isVerified) {
+    isVerified = false;
+    markBtn.disabled = true;
+    studentInfoDiv.style.display = "none";
+    timingLabel.style.display = "none";
+    timingSelect.style.display = "none";
+    info.textContent = "";
+  }
+});
+
+// Prevent Enter key from submitting form when focus is in phone input
+phoneInput.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    // Optionally trigger verify automatically:
+    // verifyBtn.click();
+  }
+});
+
 verifyBtn.addEventListener("click", () => {
   const phone = phoneInput.value.trim();
   if (phone === "") {
     info.textContent = "⚠️ Please enter phone number.";
     return;
   }
-  
+
   info.textContent = "Verifying student...";
-  fetch(`${SCRIPT_URL}?phone=${phone}`)
+  fetch(`${SCRIPT_URL}?phone=${encodeURIComponent(phone)}`)
     .then(res => res.json())
     .then(data => {
       if (data.status === "NOT_REGISTERED") {
         info.textContent = "❌ Not a registered student!";
+        isVerified = false;
+        markBtn.disabled = true;
         studentInfoDiv.style.display = "none";
         timingLabel.style.display = "none";
         timingSelect.style.display = "none";
-        markBtn.disabled = true;
       } else {
+        // Populate UI
         document.getElementById("studentName").textContent = data.name;
         document.getElementById("studentCourse").textContent = data.course;
         document.getElementById("studentTaken").textContent = data.taken;
@@ -81,24 +106,22 @@ verifyBtn.addEventListener("click", () => {
         studentInfoDiv.style.display = "block";
         info.textContent = "";
 
-        // Build timing dropdown dynamically
+        // Build timing dropdown (fresh)
         timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
-        let times = [];
-        if (data.course.toLowerCase().includes("fast")) {
+        const times = [];
+        if (String(data.course).toLowerCase().includes("fast")) {
           for (let h = 6; h <= 18; h++) {
-            let ampm = h < 12 ? "AM" : "PM";
-            let display = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
+            const ampm = h < 12 ? "AM" : "PM";
+            const display = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
             times.push(display);
           }
         } else {
           for (let h = 6; h <= 18; h++) {
-            let ampm = h < 12 ? "AM" : "PM";
-            let display1 = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
-            let display2 = `${h > 12 ? h - 12 : h}:30 ${ampm}`;
-            times.push(display1, display2);
+            const ampm = h < 12 ? "AM" : "PM";
+            times.push(`${h > 12 ? h - 12 : h}:00 ${ampm}`);
+            times.push(`${h > 12 ? h - 12 : h}:30 ${ampm}`);
           }
         }
-
         times.forEach(t => {
           const opt = document.createElement("option");
           opt.value = t;
@@ -106,27 +129,40 @@ verifyBtn.addEventListener("click", () => {
           timingSelect.appendChild(opt);
         });
 
+        // mark as verified and enable mark button
+        isVerified = true;
+        markBtn.disabled = false;
+
         timingLabel.style.display = "block";
         timingSelect.style.display = "block";
-        markBtn.disabled = false;
       }
     })
-    .catch(() => info.textContent = "⚠️ Error verifying student.");
+    .catch(() => {
+      info.textContent = "⚠️ Error verifying student.";
+      isVerified = false;
+      markBtn.disabled = true;
+    });
 });
 
-// Submit attendance
+// Form submit: enforce verification + timing
 document.getElementById("attendanceForm").addEventListener("submit", e => {
   e.preventDefault();
+
+  if (!isVerified) {
+    info.textContent = "⚠️ Please verify the student first.";
+    return;
+  }
+
   const phone = phoneInput.value.trim();
   const timing = timingSelect.value;
-
   if (!timing) {
     info.textContent = "⚠️ Please select your class timing before submitting.";
     return;
   }
 
-  markBtn.disabled = true; // prevent double-clicks
+  markBtn.disabled = true; // prevent double submissions
   info.textContent = "Submitting attendance...";
+
   const formData = new FormData();
   formData.append("phone", phone);
   formData.append("timing", timing);
@@ -136,16 +172,27 @@ document.getElementById("attendanceForm").addEventListener("submit", e => {
     .then(text => {
       if (text === "SUCCESS") {
         info.textContent = "✅ Attendance recorded!";
+        // reset UI & verification
+        isVerified = false;
+        markBtn.disabled = true;
         studentInfoDiv.style.display = "none";
         timingLabel.style.display = "none";
         timingSelect.style.display = "none";
         phoneInput.value = "";
-      } else if (text === "LIMIT_REACHED") info.textContent = "⚠️ All 20 classes completed!";
-      else if (text === "NOT_REGISTERED") info.textContent = "❌ Not registered!";
-      else info.textContent = "❌ Unknown error.";
+      } else if (text === "LIMIT_REACHED") {
+        info.textContent = "⚠️ All 20 classes completed!";
+      } else if (text === "NOT_REGISTERED") {
+        info.textContent = "❌ Not registered!";
+      } else {
+        info.textContent = "❌ Unknown error.";
+      }
     })
-    .catch(() => info.textContent = "⚠️ Error connecting to server.")
-    .finally(() => markBtn.disabled = false);
+    .catch(() => {
+      info.textContent = "⚠️ Error connecting to server.";
+    })
+    .finally(() => {
+      markBtn.disabled = false;
+    });
 });
 </script>
 
