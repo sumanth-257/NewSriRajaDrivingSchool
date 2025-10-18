@@ -45,22 +45,37 @@ button:hover { background:#3b82f6; }
 </form>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw3pnU1dZm5TAmfmdV54puX2igG_IzKHpptgYbP51X1JzVygB5LVNmTqf1NFz4Wlxgp/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnc1kVhvstCb5jE3g-97TobzmTL_B1emC_cyfRlByFRXanTMmZIK22lL0_4qQE-a8x/exec";
+
 const phoneInput = document.getElementById("phone");
 const info = document.getElementById("info");
 const studentInfoDiv = document.getElementById("studentInfo");
-const timingSelect = document.getElementById("timing");
+const timingLabel = document.createElement("label");
+const timingSelect = document.createElement("select");
 
+// Add dropdown styling
+timingLabel.textContent = "Select Timing";
+timingLabel.style.display = "none";
+timingSelect.id = "timing";
+timingSelect.style.display = "none";
+timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
+document.getElementById("attendanceForm").insertBefore(timingLabel, document.getElementById("info"));
+document.getElementById("attendanceForm").insertBefore(timingSelect, document.getElementById("info"));
+
+// When phone input loses focus (blur event)
 phoneInput.addEventListener("blur", () => {
   const phone = phoneInput.value.trim();
   if (phone === "") return;
   info.textContent = "Checking student...";
+  
   fetch(`${SCRIPT_URL}?phone=${phone}`)
     .then(res => res.json())
     .then(data => {
       if (data.status === "NOT_REGISTERED") {
         info.textContent = "❌ Not a registered student!";
         studentInfoDiv.style.display = "none";
+        timingLabel.style.display = "none";
+        timingSelect.style.display = "none";
       } else {
         document.getElementById("studentName").textContent = data.name;
         document.getElementById("studentCourse").textContent = data.course;
@@ -69,45 +84,55 @@ phoneInput.addEventListener("blur", () => {
         studentInfoDiv.style.display = "block";
         info.textContent = "";
 
-        // Update timing dropdown dynamically
-        updateTimingDropdown(data.course);
+        // Populate timing dropdown dynamically
+        timingSelect.innerHTML = `<option value="">-- Select Timing --</option>`;
+        let times = [];
+        if (data.course.toLowerCase().includes("fast")) {
+          // Fast Track → hourly slots
+          for (let h = 6; h <= 18; h++) {
+            let ampm = h < 12 ? "AM" : "PM";
+            let display = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
+            times.push(display);
+          }
+        } else {
+          // Standard → half-hour slots
+          for (let h = 6; h <= 18; h++) {
+            let ampm = h < 12 ? "AM" : "PM";
+            let display1 = `${h > 12 ? h - 12 : h}:00 ${ampm}`;
+            let display2 = `${h > 12 ? h - 12 : h}:30 ${ampm}`;
+            times.push(display1, display2);
+          }
+        }
+
+        times.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = t;
+          timingSelect.appendChild(opt);
+        });
+
+        timingLabel.style.display = "block";
+        timingSelect.style.display = "block";
       }
-    })
-    .catch(() => info.textContent = "Error checking student.");
+    });
 });
 
-// Function to populate timing options based on course
-function updateTimingDropdown(course) {
-  timingSelect.innerHTML = '<option value="">-- Select Timing --</option>';
-
-  const startHour = 6;
-  const endHour = 18;
-  const interval = (course === "FastTrack") ? 60 : 30; // mins per slot
-
-  for (let hour = startHour; hour <= endHour; hour++) {
-    for (let minute = 0; minute < 60; minute += interval) {
-      const displayHour = (hour > 12) ? hour - 12 : hour;
-      const ampm = (hour >= 12) ? "PM" : "AM";
-      const time = `${displayHour}:${minute.toString().padStart(2, "0")} ${ampm}`;
-      const option = document.createElement("option");
-      option.value = time;
-      option.textContent = time;
-      timingSelect.appendChild(option);
-    }
-  }
-}
-
+// Handle form submission
 document.getElementById("attendanceForm").addEventListener("submit", e => {
   e.preventDefault();
   const phone = phoneInput.value.trim();
   const timing = timingSelect.value;
+
   if (!timing) {
-    info.textContent = "⚠️ Please select a timing.";
+    info.textContent = "⚠️ Please select your class timing before submitting.";
     return;
   }
 
   info.textContent = "Submitting attendance...";
-  fetch(SCRIPT_URL, { method:"POST", body:new FormData(e.target) })
+  const formData = new FormData(e.target);
+  formData.append("timing", timing);
+
+  fetch(SCRIPT_URL, { method: "POST", body: formData })
     .then(res => res.text())
     .then(text => {
       if (text === "SUCCESS") info.textContent = "✅ Attendance recorded!";
@@ -118,6 +143,7 @@ document.getElementById("attendanceForm").addEventListener("submit", e => {
     .catch(() => info.textContent = "Error connecting to server.");
 });
 </script>
+
 
 </body>
 </html>
